@@ -44,7 +44,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Image source={require('./assets/logo.png')} style={styles.logo} />
+      <Image source={require('../src/assets/logo.png')} style={styles.logo} />
+
       <View style={styles.textContainer}>
         {renderAnimatedText()}
       </View>

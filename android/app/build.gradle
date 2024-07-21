@@ -1,9 +1,46 @@
-apply plugin: "com.android.application"
-apply plugin: "org.jetbrains.kotlin.android"
-apply plugin: "com.facebook.react"
+// apply plugin: "com.android.application"
+// apply plugin: "org.jetbrains.kotlin.android"
+// apply plugin: "com.facebook.react"
 
+// android {
+//     namespace 'com.demo123' // Add this line
+//     compileSdkVersion rootProject.ext.compileSdkVersion
+//     buildToolsVersion rootProject.ext.buildToolsVersion
+
+//     defaultConfig {
+//         applicationId "com.demo123"
+//         minSdkVersion rootProject.ext.minSdkVersion
+//         targetSdkVersion rootProject.ext.targetSdkVersion
+//         versionCode 1
+//         versionName "1.0"
+//     }
+//     buildTypes {
+//         release {
+//             minifyEnabled false
+//             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+//         }
+//     }
+// }
+
+// dependencies {
+//     implementation "com.facebook.react:react-android"
+//     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+// }
+
+// apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+// Apply plugins
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'com.facebook.react'
+
+// Define Kotlin version
+ext {
+    kotlinVersion = '1.8.0' // Update this to the Kotlin version you need
+}
+
+// Android configuration
 android {
-    namespace 'com.demo123' // Add this line
+    namespace 'com.demo123' // Define the namespace for the app
     compileSdkVersion rootProject.ext.compileSdkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
 
@@ -14,17 +51,34 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+
+    // Add this block if using Java 8 features
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    // Add this block if using AndroidX libraries
+    buildFeatures {
+        viewBinding true
     }
 }
 
+// Dependencies
 dependencies {
     implementation "com.facebook.react:react-android"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
 }
 
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+// Apply React Native configuration
+apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
+apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+applyNativeModulesAppBuildGradle(project)
+
