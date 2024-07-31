@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Animated, ScrollView, Platform, Modal } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Animated, ScrollView, Platform, Alert } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome'; // For calendar icon
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker'; // Import Picker
+import CheckBox from '@react-native-community/checkbox';
 
 // Function to split text into an array of letters
 const splitTextIntoLetters = (text: string) => text.split('');
@@ -31,10 +33,50 @@ const generateCaptcha = (length: number) => {
   return captcha;
 };
 
+// Validation functions
+const isValidName = (name: string) => name.trim().length > 0;
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidPhoneNumber = (phoneNumber: string) => /^\d{10}$/.test(phoneNumber);
+const isValidPassword = (password: string) => password.length >= 6;
+const doPasswordsMatch = (password: string, confirmPassword: string) => password === confirmPassword;
+
+// Function to determine password strength
+const getPasswordStrength = (password: string) => {
+  if (!password) return 'Weak';
+  const strength = [
+    /[a-z]/, // Lowercase letters
+    /[A-Z]/, // Uppercase letters
+    /\d/, // Numbers
+    /[@$!%*?&]/, // Special characters
+  ].filter(pattern => pattern.test(password)).length;
+
+  return strength === 4 ? 'Strong' : strength === 3 ? 'Moderate' : 'Weak';
+};
+
+interface MyButtonProps {
+  onPress: () => void;
+  title: string;
+}
+
+const MyButton: React.FC<MyButtonProps> = ({ onPress, title }) => {
+  const [buttonPressed, setButtonPressed] = useState(false);
+
+  return (
+    <TouchableOpacity
+      style={[styles.button, buttonPressed && styles.buttonPressed]}
+      onPressIn={() => setButtonPressed(true)} // Set pressed state on press
+      onPressOut={() => setButtonPressed(false)} // Reset pressed state on release
+      onPress={onPress}
+    >
+      <Text style={styles.buttonText}>{title}</Text>
+    </TouchableOpacity>
+  );
+};
+
 const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const text = "Sign Up";
   const animations = useState(createAnimations(text))[0];
-  const [salutation, setSalutation] = useState('');
+  const [salutation, setSalutation] = useState(''); // State for salutation
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -45,7 +87,16 @@ const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [captcha, setCaptcha] = useState(generateCaptcha(4));
   const [enteredCaptcha, setEnteredCaptcha] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+
+  const [salutationError, setSalutationError] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState<boolean>(false);
+
+  const [nameError, setNameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [phoneNumberError, setPhoneNumberError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState('Weak'); // New state for password strength
 
   useEffect(() => {
     // Refresh CAPTCHA when the component mounts
@@ -61,14 +112,64 @@ const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   };
 
   const handleSignup = () => {
-    // Add your signup logic here
-    if (enteredCaptcha === captcha) {
-      // Proceed with signup
-      navigation.replace('Login');
+    let valid = true;
+
+    if (!isValidName(name)) {
+      setNameError('Please enter a valid name.');
+      valid = false;
     } else {
-      alert('CAPTCHA does not match');
-      refreshCaptcha();
+      setNameError('');
     }
+
+    if (!salutation) {
+      setSalutationError('Please select a salutation.');
+      valid = false;
+    } else {
+      setSalutationError('');
+    }
+    if (!acceptTerms) {
+      Alert.alert('You must accept the terms and conditions to proceed.');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setEmailError('Please enter a valid email.');
+      valid = false;
+    } else {
+      setEmailError('');
+    }
+
+    if (!isValidPhoneNumber(phoneNumber)) {
+      setPhoneNumberError('Please enter a valid phone number (10 digits).');
+      valid = false;
+    } else {
+      setPhoneNumberError('');
+    }
+
+    if (!isValidPassword(password)) {
+      setPasswordError('Password must be at least 6 characters long.');
+      valid = false;
+    } else {
+      setPasswordError('');
+    }
+
+    if (!doPasswordsMatch(password, confirmPassword)) {
+      setConfirmPasswordError('Passwords do not match.');
+      valid = false;
+    } else {
+      setConfirmPasswordError('');
+    }
+
+    if (enteredCaptcha !== captcha) {
+      Alert.alert('CAPTCHA does not match.');
+      refreshCaptcha();
+      valid = false;
+    }
+
+    if (!valid) return;
+
+    // Proceed with signup if all validations pass
+    navigation.replace('Login');
   };
 
   const onChangeDate = (event: any, selectedDate?: Date) => {
@@ -81,6 +182,11 @@ const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   // Set maximum date to January 1, 2006
   const maximumDate = new Date(2006, 0, 1);
+
+  // Update password strength whenever password changes
+  useEffect(() => {
+    setPasswordStrength(getPasswordStrength(password));
+  }, [password]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -96,112 +202,162 @@ const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           </Animated.Text>
         ))}
       </View>
+      
       <View style={styles.inputContainer}>
-        <Icon name="user" size={30} color="#fff" style={styles.icon} />
-        <TextInput 
-          style={styles.input} 
-          placeholder="Name" 
-          placeholderTextColor="#fff" 
-          value={name}
-          onChangeText={setName}
-        />
+        {salutationError ? <Text style={styles.errorText}>{salutationError}</Text> : null}
+        <View style={styles.inputWrapper}>
+          <Icon name="greeting" size={30} color="#000" style={styles.icon} />
+          <Picker
+            selectedValue={salutation}
+            onValueChange={(itemValue) => setSalutation(itemValue)}
+            style={styles.picker}
+          >
+            <Picker.Item label="Mr" value="Mr" />
+            <Picker.Item label="Mrs" value="Mrs" />
+            <Picker.Item label="Miss" value="Miss" />
+          </Picker>
+          {salutationError ? <Text style={styles.errorText}>{salutationError}</Text> : null}
+        </View>
       </View>
+    
       <View style={styles.inputContainer}>
-        <Icon name="envelope" size={30} color="#fff" style={styles.icon} />
-        <TextInput 
-          style={styles.input} 
-          placeholder="Email" 
-          placeholderTextColor="#fff" 
-          value={email}
-          onChangeText={setEmail}
-        />
-      </View>
-      <View style={styles.inputContainer}>
-        <Icon name="phone" size={30} color="#fff" style={styles.icon} />
-        <TextInput 
-          style={styles.input} 
-          placeholder="Phone Number" 
-          placeholderTextColor="#fff" 
-          keyboardType="phone-pad"
-          value={phoneNumber}
-          onChangeText={setPhoneNumber}
-        />
-      </View>
-      <View style={styles.inputContainer}>
-        <Icon name="calendar" size={30} color="#fff" style={styles.icon} />
-        <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.datePicker}>
-          <Text style={styles.datePickerText}>{dateOfBirth.getFullYear() === 1970 ? 'Select Date' : dateOfBirth.toDateString()}</Text>
-        </TouchableOpacity>
+        {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
+        <View style={styles.inputWrapper}>
+          <Icon name="user" size={30} color="#000" style={styles.icon} />
+          <TextInput 
+            style={[styles.input, nameError ? styles.inputError : {}]} 
+            placeholder="Name" 
+            placeholderTextColor="#000" 
+            value={name}
+            onChangeText={setName}
+          />
+        </View>
       </View>
       <View style={styles.inputContainer}>
-        <Icon name="home" size={30} color="#fff" style={styles.icon} />
-        <TextInput 
-          style={styles.input} 
-          placeholder="Address" 
-          placeholderTextColor="#fff" 
-          value={address}
-          onChangeText={setAddress}
-        />
+        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+        <View style={styles.inputWrapper}>
+          <Icon name="envelope" size={30} color="#000" style={styles.icon} />
+          <TextInput 
+            style={[styles.input, emailError ? styles.inputError : {}]} 
+            placeholder="Email" 
+            placeholderTextColor="#000" 
+            value={email}
+            onChangeText={setEmail}
+          />
+        </View>
       </View>
       <View style={styles.inputContainer}>
-        <Icon name="lock" size={30} color="#fff" style={styles.icon} />
-        <TextInput 
-          style={styles.input} 
-          placeholder="Password" 
-          placeholderTextColor="#fff" 
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        {phoneNumberError ? <Text style={styles.errorText}>{phoneNumberError}</Text> : null}
+        <View style={styles.inputWrapper}>
+          <Icon name="phone" size={30} color="#000" style={styles.icon} />
+          <TextInput 
+            style={[styles.input, phoneNumberError ? styles.inputError : {}]} 
+            placeholder="Phone Number" 
+            placeholderTextColor="#000" 
+            value={phoneNumber}
+            keyboardType="numeric"
+            onChangeText={setPhoneNumber}
+          />
+        </View>
       </View>
       <View style={styles.inputContainer}>
-        <Icon name="lock" size={30} color="#fff" style={styles.icon} />
-        <TextInput 
-          style={styles.input} 
-          placeholder="Confirm Password" 
-          placeholderTextColor="#fff" 
-          secureTextEntry
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
+        {showDatePicker && (
+          <DateTimePicker
+            testID="dateTimePicker"
+            value={dateOfBirth}
+            mode="date"
+            display="default"
+            maximumDate={maximumDate}
+            onChange={onChangeDate}
+          />
+        )}
+        <View style={styles.inputWrapper}>
+          <Icon name="calendar" size={20} color="#000" style={styles.icon} />
+          <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+            <Text style={styles.datePickerText}>
+            {dateOfBirth.getFullYear() === 1970 ? 'Select Date' : dateOfBirth.toDateString()}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.inputContainer}>
+        <View style={styles.inputWrapper}>
+          <Icon name="home" size={30} color="#000" style={styles.icon} />
+          <TextInput 
+            style={styles.input} 
+            placeholder="Address" 
+            placeholderTextColor="#000" 
+            value={address}
+            onChangeText={setAddress}
+          />
+        </View>
+      </View>
+      <View style={styles.inputContainer}>
+        {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+        <View style={styles.inputWrapper}>
+          <Icon name="lock" size={30} color="#000" style={styles.icon} />
+          <TextInput 
+            style={[styles.input, passwordError ? styles.inputError : {}]} 
+            placeholder="Password" 
+            placeholderTextColor="#000" 
+            secureTextEntry 
+            value={password}
+            onChangeText={setPassword}
+          />
+        </View>
+        <Text
+    style={[
+      styles.passwordStrength,
+      passwordStrength === 'Weak' && styles.passwordStrengthWeak,
+      passwordStrength === 'Moderate' && styles.passwordStrengthModerate,
+      passwordStrength === 'Strong' && styles.passwordStrengthStrong
+    ]}
+  >
+    Strength: {passwordStrength}
+  </Text>
+      </View>
+      <View style={styles.inputContainer}>
+        {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
+        <View style={styles.inputWrapper}>
+          <Icon name="lock" size={30} color="#000" style={styles.icon} />
+          <TextInput 
+            style={[styles.input, confirmPasswordError ? styles.inputError : {}]} 
+            placeholder="Confirm Password" 
+            placeholderTextColor="#000" 
+            secureTextEntry 
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
+        </View>
+      </View>
+      <View style={styles.inputContainer}>
+        <View style={styles.inputWrapper}>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Enter CAPTCHA" 
+            placeholderTextColor="#000000" 
+            value={enteredCaptcha}
+            onChangeText={handleCaptchaChange}
+          />
+          <Text style={styles.captchaText}>{captcha}</Text>
+          <TouchableOpacity onPress={refreshCaptcha} style={styles.refreshButton}>
+            <Icon name="refresh" size={30} color="#000000" />
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.checkboxContainer}>
+        <CheckBox
+          value={acceptTerms}
+          onValueChange={setAcceptTerms}
+          tintColors={{ true: '#000000', false: '#000000' }} 
+          style={styles.checkbox}
         />
+        <Text style={styles.checkboxLabel}>I accept the terms and conditions</Text>
       </View>
-      {/* CAPTCHA Display and Refresh Section */}
-      <View style={styles.captchaDisplayContainer}>
-        <Text style={styles.captchaText}>{captcha}</Text>
-        <TouchableOpacity onPress={refreshCaptcha}>
-          <Text style={styles.refreshText}>Refresh CAPTCHA</Text>
-        </TouchableOpacity>
-      </View>
-      {/* CAPTCHA Input Section */}
-      <View style={styles.captchaInputContainer}>
-        <TextInput 
-          style={styles.captchaInput} 
-          placeholder="Enter CAPTCHA" 
-          placeholderTextColor="#fff" 
-          value={enteredCaptcha}
-          onChangeText={handleCaptchaChange}
-        />
-      </View>
-      {/* Signup Button */}
-      <TouchableOpacity style={styles.button} onPress={handleSignup}>
-        <Text style={styles.buttonText}>Sign Up</Text>
+      <MyButton onPress={handleSignup} title="Sign Up" />
+      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+        <Text style={styles.loginText}>Already have an account? Log in</Text>
       </TouchableOpacity>
-      <View style={styles.linkContainer}>
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.linkText}>Back to Login</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Date Picker */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={dateOfBirth}
-          mode="date"
-          display="default"
-          onChange={onChangeDate}
-          maximumDate={maximumDate}
-        />
-      )}
     </ScrollView>
   );
 };
@@ -210,103 +366,137 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
     padding: 20,
+    backgroundColor:'#f7f5f5'
   },
   titleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     marginBottom: 10,
   },
   title: {
-    fontSize: 35,
+    fontSize: 32,
     fontWeight: 'bold',
-    fontStyle: 'italic',
-    color: '#fff',
-    fontFamily: 'Bazooka-BoldItalic', // Ensure this name matches exactly
+    color: '#000',
   },
   inputContainer: {
+    marginBottom: 15,
+  },
+  inputWrapper: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#333',
-    borderRadius: 10,
-    marginBottom: 20,
-    width: '100%',
+    borderWidth: 1, // Set border width for all sides
+    borderColor: '#2e2d2d', // Set the border color
+    borderRadius: 4, 
   },
   input: {
-    flex: 1,
-    padding: 15,
-    fontSize:16,
-    color: '#fff',
-    fontFamily: 'Bazooka', // Ensure this name matches exactly
+    backgroundColor: '#f7f5f5',
+    borderRadius: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    color: '#000000',
+    fontSize: 15,
+    flex:1,
+    width:'100%'
   },
-  captchaDisplayContainer: {
-    backgroundColor: '#333',
-    borderWidth: 1,
-    borderColor: '#555',
-    borderRadius: 10,
-    padding: 9,
-    marginBottom: 20,
-    width: '100%',
+  inputError: {
+    position: 'relative',
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  captchaText: {
-    fontSize: 18,
-    color: '#fff',
-  },
-  refreshText: {
-    fontSize: 16,
-    color: '#717171',
-    marginTop: 5,
-  },
-  captchaInputContainer: {
-    backgroundColor: '#333',
-    borderWidth: 1,
-    borderColor: '#555',
-    borderRadius: 10,
-    width: '100%',
-  },
-  captchaInput: {
-    padding: 10,
-    fontSize: 16,
-    color: '#fff',
+    borderWidth: 1, // Set border width for all sides
+    borderColor: '#f80808', // Set the border color
+    borderRadius: 4, 
+
   },
   button: {
-    backgroundColor: '#555',
-    padding: 15,
-    borderRadius: 10,
-    width: '100%',
+    backgroundColor: '#050505',
+    padding: 10,
+    borderRadius: 5,
     alignItems: 'center',
-    marginTop: 20,
+  },
+  buttonPressed: {
+    backgroundColor: '#dddfdd',
   },
   buttonText: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
   },
-  linkContainer: {
-    marginTop: 20,
-  },
-  linkText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  icon: {
-    padding: 15,
+  errorText: {
+    color: 'red',
+    fontSize: 12,
   },
   datePicker: {
     flex: 1,
-    padding: 15,
+    justifyContent: 'center',
   },
   datePickerText: {
-    color: '#fff',
+    color: '#000000',
     fontSize: 16,
   },
+  refreshButton: {
+    position: 'absolute',
+    right: 10,
+    top: 5,
+  },
+  refreshButtonText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  captchaText: {
+    position: 'absolute',
+    right: 60,
+    top: 15,
+    color: '#060606',
+    fontSize:20,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  checkbox: {
+    marginRight: 10,
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    color: '#000',
+  },
+  loginText: {
+    color: '#0a0b0a',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  icon: {
+    marginRight: 10,
+   
+    marginLeft:10,
+  },
+  picker: {
+    flex: 1,
+    height: 40,
+    borderColor: '#0b0b0b',
+    borderBottomWidth: 1,
+    color: '#000',
+  },
+  passwordStrength: {
+    marginTop: 5,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333', // Default color
+  },
+  passwordStrengthWeak: {
+    color: 'red', // Weak strength color
+  },
+  passwordStrengthModerate: {
+    color: 'orange', // Moderate strength color
+  },
+  passwordStrengthStrong: {
+    color: 'green', // Strong strength color
+  },
+  
 });
 
 export default SignupScreen;
-function alert(arg0: string) {
-  throw new Error('Function not implemented.');
-}
-

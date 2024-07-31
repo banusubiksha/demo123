@@ -35,6 +35,8 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const animations = useState(createAnimations(text))[0];
   const [captcha, setCaptcha] = useState(generateCaptcha(4));
   const [enteredCaptcha, setEnteredCaptcha] = useState('');
+  const [isCaptchaValid, setIsCaptchaValid] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     // Refresh CAPTCHA when the component mounts
@@ -47,6 +49,22 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   const handleCaptchaChange = (text: string) => {
     setEnteredCaptcha(text);
+    if (text === captcha) {
+      setIsCaptchaValid(true);
+      setErrorMessage('');
+    } else {
+      setIsCaptchaValid(false);
+      //setErrorMessage('Incorrect CAPTCHA');
+    }
+  };
+
+  const handleLogin = () => {
+    if (enteredCaptcha === captcha) {
+      navigation.navigate('Profile');
+    } else {
+      setIsCaptchaValid(false);
+      setErrorMessage('Incorrect CAPTCHA');
+    }
   };
 
   return (
@@ -64,32 +82,48 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         ))}
       </View>
       <View style={styles.inputContainer}>
-        <Icon name="envelope" size={20} color="#fff" style={styles.icon} />
-        <TextInput style={styles.input} placeholder="Email" placeholderTextColor="#fff" />
-      </View>
-      <View style={styles.inputContainer}>
-        <Icon name="lock" size={20} color="#fff" style={styles.icon} />
-        <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#fff" secureTextEntry />
+        {/* {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null} */}
+        <View style={styles.inputWrapper}>
+          <Icon name="envelope" size={30} color="#000" style={styles.icon} />
+          <TextInput 
+            // style={[styles.input, emailError ? styles.inputError : {}]} 
+            placeholder="Email" 
+            placeholderTextColor="#000" 
+            // value={email}
+            // onChangeText={setEmail}
+          />
+        </View>
+        </View>
+        <View style={styles.inputContainer}>
+        <View style={styles.inputWrapper}>
+          <Icon name="lock" size={30} color="#000" style={styles.icon} />
+          <TextInput 
+            //style={[styles.input, confirmPasswordError ? styles.inputError : {}]} 
+            placeholder="Password" 
+            placeholderTextColor="#000" 
+            secureTextEntry 
+          />
+        </View>
       </View>
       {/* CAPTCHA Display and Refresh Section */}
-      <View style={styles.captchaDisplayContainer}>
-        <Text style={styles.captchaText}>{captcha}</Text>
-        <TouchableOpacity onPress={refreshCaptcha}>
-          <Text style={styles.refreshText}>Refresh CAPTCHA</Text>
-        </TouchableOpacity>
-      </View>
-      {/* CAPTCHA Input Section */}
-      <View style={styles.captchaInputContainer}>
-        <TextInput 
-          style={styles.captchaInput} 
-          placeholder="Enter CAPTCHA" 
-          placeholderTextColor="#fff" 
-          value={enteredCaptcha}
-          onChangeText={handleCaptchaChange}
-        />
+      <View style={styles.inputContainer}>
+        <View style={styles.inputWrapper}>
+          <TextInput 
+            style={[styles.input, !isCaptchaValid && styles.inputError]} 
+            placeholder="Enter CAPTCHA" 
+            placeholderTextColor="#000" 
+            value={enteredCaptcha}
+            onChangeText={handleCaptchaChange}
+          />
+          <Text style={styles.captchaText}>{captcha}</Text>
+          <TouchableOpacity onPress={refreshCaptcha} style={styles.refreshButton}>
+            <Icon name="refresh" size={30} color="#000" />
+          </TouchableOpacity>
+        </View>
+        {!isCaptchaValid && <Text style={styles.errorText}>{errorMessage}</Text>}
       </View>
       {/* Login Button */}
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Main')}>
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
       <View style={styles.linkContainer}>
@@ -106,101 +140,101 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
     padding: 20,
+    backgroundColor:'#f7f5f5'
   },
   titleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 10,
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    fontStyle: 'italic',
-    color: '#fff',
-    fontFamily: 'Bazooka-BoldItalic', // Ensure this name matches exactly
+    color: '#000',
   },
   inputContainer: {
+    marginBottom: 15,
+  },
+  inputWrapper: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#333',
-    borderRadius: 5,
-    marginBottom: 10,
-    width: '100%',
+    borderWidth: 1, // Set border width for all sides
+    borderColor: '#2e2d2d', // Set the border color
+    borderRadius: 4, 
   },
   input: {
-    flex: 1,
-    padding: 10,
-    color: '#fff',
-    fontFamily: 'Bazooka', // Ensure this name matches exactly
-  },
-  captchaDisplayContainer: {
-    backgroundColor: '#333',
-    borderWidth: 1,
-    borderColor: '#555',
+    backgroundColor: '#f7f5f5',
     borderRadius: 5,
-    padding: 10,
-    marginTop: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    color: '#000000',
+    fontSize: 15,
+    flex:1,
+    width:'100%'
+  },
+  inputError: {
+    position: 'relative',
+    flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
-  },
-  captchaText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#f4f4ee',
-    fontFamily: 'Italic',
-  },
-  refreshText: {
-    color: '#aaa',
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: 'Bazooka',
-  },
-  captchaInputContainer: {
-    width: '100%',
-    marginTop: 10,
-  },
-  captchaInput: {
-    padding: 10,
-    backgroundColor: '#333',
-    borderWidth: 1,
-    borderColor: '#555',
-    borderRadius: 5,
-    color: '#fff',
-    fontFamily: 'Bazooka',
-  },
-  icon: {
-    padding: 10,
+    borderWidth: 1, // Set border width for all sides
+    borderColor: '#f80808', // Set the border color
+    borderRadius: 4, 
+
   },
   button: {
-    backgroundColor: '#555',
+    backgroundColor: '#050505',
     padding: 10,
-    borderRadius: 45,
+    borderRadius: 5,
     alignItems: 'center',
-    marginTop: 20,
-    width: '100%',
   },
+ 
   buttonText: {
     color: '#fff',
-    fontSize: 20,
-    fontFamily: 'Bazooka',
+    fontSize: 18,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+  },
+ 
+  refreshButton: {
+    position: 'absolute',
+    right: 10,
+    top: 5,
+  },
+  refreshButtonText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  captchaText: {
+    position: 'absolute',
+    right: 60,
+    top: 15,
+    color: '#060606',
+    fontSize:20,
+  },
+  icon: {
+    marginRight: 10,
+    marginLeft:10,
   },
   linkContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 20,
-  },
-  linkText: {
-    color: '#fff',
-    fontSize: 16,
-    marginHorizontal: 10,
-    fontFamily: 'Bazooka',
-  },
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      width: '100%',
+      marginTop: 20,
+    },
+    linkText: {
+      color: '#0a0a0a',
+      fontSize: 16,
+      marginHorizontal: 10,
+      fontFamily: 'Bazooka',
+    },
+    
 });
 
 export default LoginScreen;
